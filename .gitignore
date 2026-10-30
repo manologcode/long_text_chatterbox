@@ -1,0 +1,4 @@
+app/audio_files
+app/temp_audio
+__pycache__
+*.pyc

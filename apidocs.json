@@ -1,0 +1,407 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Text-to-Speech API (Chatterbox)",
+    "description": "API para convertir texto a voz usando Chatterbox con soporte para textos largos. Incluye procesamiento de números, etiquetas especiales y opciones de streaming.\n\n## Requisitos de Funcionamiento\n\nEsta aplicación **REQUIERE** que el servicio externo **Chatterbox** esté corriendo y accesible:\n\n- **Servicio**: Chatterbox (interfaz Gradio)\n- **URL por defecto**: http://192.168.1.69:8020\n- **Configuración**: La URL se puede cambiar mediante la variable de entorno `SERVER_URL_CHATTERBOX`\n- **Endpoints del servicio requeridos**: `/gradio_api/call/generate_tts_audio` y `/gradio_api/call/generate_tts_audio/{event_id}`\n\nSin este servicio, los endpoints `/text-to-speech` y `/tts_stream` retornarán errores de conexión.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Support"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5009",
+      "description": "Development server"
+    },
+    {
+      "url": "http://192.168.1.69:5009",
+      "description": "Production server"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Root endpoint",
+        "description": "Redirige a la documentación interactiva de la API",
+        "operationId": "read_root",
+        "responses": {
+          "302": {
+            "description": "Redirección a /docs"
+          }
+        },
+        "tags": ["Health"]
+      }
+    },
+    "/apidocs.json": {
+      "get": {
+        "summary": "Obtener documentación en formato OpenAPI",
+        "description": "Retorna la especificación OpenAPI 3.0.0 de esta API en formato JSON",
+        "operationId": "get_apidocs",
+        "tags": ["Health"],
+        "responses": {
+          "200": {
+            "description": "Especificación OpenAPI en formato JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Archivo de documentación no encontrado"
+          }
+        }
+      }
+    },
+    "/text-to-speech": {
+      "post": {
+        "summary": "Generar audio de forma asincrónica",
+        "description": "Crea una tarea para convertir texto a voz de manera asincrónica. El texto se fragmenta automáticamente y el audio se procesa en segundo plano. Se puede consultar usando el job_id retornado.",
+        "operationId": "text_to_speech",
+        "tags": ["Text-to-Speech"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextToSpeechRequest"
+              },
+              "example": {
+                "text": "Hola, este es un ejemplo de conversión de texto a voz.",
+                "reference_audio": null,
+                "exaggeration": 0.5,
+                "temperature": 0.8,
+                "seed": 0,
+                "cfg_weight": 0.5
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tarea creada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextToSpeechResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error en la solicitud"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    },
+    "/status/{job_id}": {
+      "get": {
+        "summary": "Obtener estado de una tarea",
+        "description": "Consulta el estado actual de una tarea de conversión de texto a voz identificada por su job_id.",
+        "operationId": "get_job_status",
+        "tags": ["Status"],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "description": "ID único de la tarea",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado de la tarea",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tarea no encontrada"
+          }
+        }
+      }
+    },
+    "/audio/{job_id}": {
+      "get": {
+        "summary": "Descargar audio generado",
+        "description": "Descarga el archivo de audio MP3 generado por la tarea especificada. El status de la tarea debe ser 'completed'.",
+        "operationId": "get_audio",
+        "tags": ["Audio"],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "description": "ID único de la tarea",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archivo de audio MP3",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Audio aún no listo o error en procesamiento"
+          },
+          "404": {
+            "description": "Tarea o archivo no encontrado"
+          }
+        }
+      }
+    },
+    "/tts_stream": {
+      "post": {
+        "summary": "Streaming directo de texto a voz",
+        "description": "Convierte texto a voz con Chatterbox y retorna un stream de audio WAV en tiempo real. No fragmenta el texto.",
+        "operationId": "tts_stream",
+        "tags": ["Text-to-Speech"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TTSStreamRequest"
+              },
+              "example": {
+                "text": "Este es un streaming de audio en tiempo real.",
+                "reference_audio": null,
+                "exaggeration": 0.5,
+                "temperature": 0.8,
+                "seed": 0,
+                "cfg_weight": 0.5
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stream de audio en formato WAV",
+            "content": {
+              "audio/wav": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error en la solicitud (voz no encontrada, texto vacío, etc.)"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TextToSpeechRequest": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Texto a convertir a voz. Soporta números que serán convertidos a palabras, acentos y caracteres especiales del español.",
+            "example": "Los números como 123 y 45,67 se convierten automáticamente a palabras."
+          },
+          "reference_audio": {
+            "description": "Audio de referencia opcional para clonar la voz. Puede ser una ruta del servidor, una URL de Gradio o un objeto FileData. Si es null se usa el audio de referencia por defecto de la interfaz.",
+            "nullable": true,
+            "oneOf": [
+              { "type": "string" },
+              { "type": "object" }
+            ],
+            "example": null
+          },
+          "exaggeration": {
+            "type": "number",
+            "format": "float",
+            "default": 0.5,
+            "description": "Nivel de exageración de la voz.",
+            "example": 0.5
+          },
+          "temperature": {
+            "type": "number",
+            "format": "float",
+            "default": 0.8,
+            "description": "Temperatura de muestreo.",
+            "example": 0.8
+          },
+          "seed": {
+            "type": "integer",
+            "default": 0,
+            "description": "Semilla aleatoria. 0 para aleatoria.",
+            "example": 0
+          },
+          "cfg_weight": {
+            "type": "number",
+            "format": "float",
+            "default": 0.5,
+            "description": "Peso de la guía libre de clasificador (CFG).",
+            "example": 0.5
+          }
+        }
+      },
+      "TTSStreamRequest": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Texto a convertir a voz de forma inmediata.",
+            "example": "Stream de audio en tiempo real"
+          },
+          "reference_audio": {
+            "description": "Audio de referencia opcional para clonar la voz. Puede ser una ruta del servidor, una URL de Gradio o un objeto FileData. Si es null se usa el audio de referencia por defecto de la interfaz.",
+            "nullable": true,
+            "oneOf": [
+              { "type": "string" },
+              { "type": "object" }
+            ],
+            "example": null
+          },
+          "exaggeration": {
+            "type": "number",
+            "format": "float",
+            "default": 0.5,
+            "description": "Nivel de exageración de la voz.",
+            "example": 0.5
+          },
+          "temperature": {
+            "type": "number",
+            "format": "float",
+            "default": 0.8,
+            "description": "Temperatura de muestreo.",
+            "example": 0.8
+          },
+          "seed": {
+            "type": "integer",
+            "default": 0,
+            "description": "Semilla aleatoria. 0 para aleatoria.",
+            "example": 0
+          },
+          "cfg_weight": {
+            "type": "number",
+            "format": "float",
+            "default": 0.5,
+            "description": "Peso de la guía libre de clasificador (CFG).",
+            "example": 0.5
+          }
+        }
+      },
+      "TextToSpeechResponse": {
+        "type": "object",
+        "properties": {
+          "audio_url": {
+            "type": "string",
+            "description": "URL para consultar el estado o descargar el audio. Corresponde a /status/{job_id}.",
+            "example": "/status/550e8400-e29b-41d4-a716-446655440000"
+          },
+          "job_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID único de la tarea de procesamiento.",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["queued", "processing", "completed", "failed"],
+            "description": "Estado actual de la tarea.",
+            "example": "queued"
+          }
+        }
+      },
+      "JobStatus": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["queued", "processing", "completed", "failed"],
+            "description": "Estado actual de la tarea.",
+            "example": "processing"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Lista de errores ocurridos durante el procesamiento.",
+            "example": []
+          },
+          "output_file": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ruta del archivo de salida generado.",
+            "example": "audio_files/audio_550e8400.mp3"
+          },
+          "audio_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL para descargar el audio una vez completado.",
+            "example": "/audio/550e8400-e29b-41d4-a716-446655440000"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Endpoints de salud y utilidad"
+    },
+    {
+      "name": "Text-to-Speech",
+      "description": "Endpoints para conversión de texto a voz"
+    },
+    {
+      "name": "Status",
+      "description": "Endpoints para consultar estado de tareas"
+    },
+    {
+      "name": "Audio",
+      "description": "Endpoints para descargar audio"
+    }
+  ],
+  "x-dependencies": {
+    "external-services": [
+      {
+        "name": "chatterbox",
+        "description": "Servicio de Text-to-Speech Engine basado en Chatterbox",
+        "required": true,
+        "default-url": "http://192.168.1.69:8020",
+        "environment-variable": "SERVER_URL_CHATTERBOX",
+        "endpoints-required": [
+          "/gradio_api/call/generate_tts_audio",
+          "/gradio_api/call/generate_tts_audio/{event_id}"
+        ],
+        "note": "Este servicio es CRÍTICO. Sin él, los endpoints de conversión de texto a voz no funcionarán."
+      }
+    ]
+  }
+}

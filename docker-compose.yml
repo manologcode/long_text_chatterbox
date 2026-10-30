@@ -1,0 +1,13 @@
+services:
+  app:
+    image: manologcode/long_text_chatterbox
+    build: .
+    restart: always
+    container_name: long_text_chatterbox
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5009"]
+    ports:
+      - "5009:5009"
+    volumes:
+      - ./app:/app
+    environment:
+      - SERVER_URL_CHATTERBOX=http://192.168.1.69:8020
