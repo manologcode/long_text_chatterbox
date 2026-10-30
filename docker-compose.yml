@@ -9,5 +9,12 @@ services:
       - "5009:5009"
     volumes:
       - ./app:/app
+      - chatterbox_data:/data
     environment:
       - SERVER_URL_CHATTERBOX=http://192.168.1.69:8020
+      - AUDIO_FILES_DIR=/data/audio_files
+      - TEMP_DIR=/data/temp_audio
+      - AUDIO_TAGS_DIR=/app/effects
+
+volumes:
+  chatterbox_data:

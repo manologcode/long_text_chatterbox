@@ -48,9 +48,9 @@ class TTSStreamRequest(BaseModel):
     cfg_weight: float = 0.5
 
 class Config:
-    AUDIO_FILES_DIR = "audio_files"
-    TEMP_DIR = "temp_audio"
-    AUDIO_TAGS_DIR = "effects"
+    AUDIO_FILES_DIR = os.getenv("AUDIO_FILES_DIR", "audio_files")
+    TEMP_DIR = os.getenv("TEMP_DIR", "temp_audio")
+    AUDIO_TAGS_DIR = os.getenv("AUDIO_TAGS_DIR", "effects")
     SERVER_URL = os.getenv("SERVER_URL_CHATTERBOX", "http://192.168.1.69:8020")
     GRADIO_CALL_ENDPOINT = "/gradio_api/call/generate_tts_audio"
     MAX_CHUNK_SIZE = 230

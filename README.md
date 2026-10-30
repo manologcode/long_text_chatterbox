@@ -113,13 +113,15 @@ Convierte texto a voz con respuesta en tiempo real (streaming WAV), sin fragment
    ```bash
    docker run -d \
      --name long_text_chatterbox \
-     -v ./app/audio_files:/app/audio_files \
+     -v chatterbox_data:/data \
      -p 5009:5009 \
      -e SERVER_URL_CHATTERBOX=http://192.168.1.69:8020 \
      manologcode/long_text_chatterbox
    ```
 
    Asegúrate de reemplazar `http://192.168.1.69:8020` con la URL o nombre del servicio de tu Chatterbox.
+
+   Los audios generados y los temporales se guardan en el volumen `chatterbox_data` (`/data/audio_files` y `/data/temp_audio`). Así se evitan problemas de permisos cuando el código se monta desde el host con `-v ./app:/app`.
 
 2. **Probar la conversión de texto a voz:**
 
@@ -130,6 +132,19 @@ Convierte texto a voz con respuesta en tiempo real (streaming WAV), sin fragment
    Esto generará un audio con el texto proporcionado.
 
 ## Ejecutar con Docker Compose
+
+### Desde Docker Hub (sin construir la imagen)
+
+Descarga la imagen publicada `manologcode/long_text_chatterbox` y levanta el contenedor `long_text_chatterbox`:
+
+```bash
+docker compose pull
+docker compose up -d --no-build
+```
+
+La imagen utilizada es `manologcode/long_text_chatterbox:latest` (definida en `docker-compose.yml`).
+
+### Construyendo la imagen en local
 
 ```bash
 docker compose up -d --build

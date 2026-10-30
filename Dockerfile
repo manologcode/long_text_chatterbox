@@ -16,11 +16,14 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 RUN useradd --create-home --shell /bin/bash myuser
 
-USER myuser
-
 COPY --chown=myuser:myuser ./app /app
 
+RUN mkdir -p /data/audio_files /data/temp_audio && \
+    chown -R myuser:myuser /app /data
+
 WORKDIR /app
+
+USER myuser
 
 EXPOSE 5009
 
